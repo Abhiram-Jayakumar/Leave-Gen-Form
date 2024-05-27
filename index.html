@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Letter Generator</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "@google/generative-ai": "https://esm.run/@google/generative-ai"
+            }
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .form-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .textarea {
+            resize: vertical;
+        }
+
+        .spinner {
+            display: none;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            text-align: center;
+            color: #555;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Leave Letter Generator</h1>
+    <div class="form-container">
+        <label for="your-name">Your Name:</label>
+        <input type="text" id="your-name" placeholder="Your Name"><br>
+
+        <label for="from-address">From Address:</label>
+        <textarea id="from-address" class="textarea" placeholder="Your Address"></textarea><br>
+
+        <label for="apply-to">Name of Person to Apply to:</label>
+        <input type="text" id="apply-to" placeholder="Name of Person"><br>
+
+        <label for="To-Address">To Address:</label>
+        <textarea id="To-Address" class="textarea" placeholder="To Address"></textarea><br>
+
+        <label for="purpose">Organization Applying for Leave:</label>
+        <select id="purpose">
+            <option value="College">College</option>
+            <option value="Company">Company</option>
+        </select><br>
+
+        <label for="reason">Reason for Leave:</label>
+        <input type="text" id="reason" placeholder="Reason for Leave"><br>
+
+        <label for="start-date">Start Date:</label>
+        <input type="date" id="start-date"><br>
+
+        <label for="end-date">End Date:</label>
+        <input type="date" id="end-date"><br>
+
+        <button id="send-button">Generate Leave Letter</button>
+        
+        <div class="spinner" id="loading-spinner"></div>
+        <div class="loading-text" id="loading-text">Generating your leave letter, please wait...</div>
+    </div>
+
+    <script type="module">
+        import { GoogleGenerativeAI } from "@google/generative-ai";
+
+        const API_KEY = "AIzaSyD5u-TDS2Jo7aqLB_9e1cKhUWYWlHryqt4"; // Replace with your actual API key
+
+        const genAI = new GoogleGenerativeAI(API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+        document.getElementById("send-button").addEventListener("click", async () => {
+            const UserName = document.getElementById("your-name").value;
+            const UserfromAddress = document.getElementById("from-address").value;
+            const toAddress = document.getElementById("To-Address").value;
+            const applyingTo = document.getElementById("apply-to").value;
+            const purpose = document.getElementById("purpose").value;
+            const reason = document.getElementById("reason").value;
+            const startDate = document.getElementById("start-date").value;
+            const endDate = document.getElementById("end-date").value;
+
+            if (!UserName.trim() || !applyingTo.trim() || !reason.trim() || !UserfromAddress.trim() || !toAddress.trim() || !startDate || !endDate) {
+                alert("Please fill in all fields");
+                return;
+            }
+
+            const prompt = `
+                Generate a leave letter with the following details:
+                From:
+                ${UserName}
+                ${UserfromAddress}
+
+                To:
+                ${applyingTo}
+                ${toAddress}
+                
+                Purpose: ${purpose}
+                Reason: ${reason}
+                Start Date: ${startDate}
+                End Date: ${endDate}
+                
+                The letter should include all these details, formatted properly. Display username before the UserfromAddress.
+            `;
+
+            try {
+                document.getElementById("loading-spinner").style.display = "block";
+                document.getElementById("loading-text").style.display = "block";
+
+                const startTime = new Date();
+
+                const result = await model.generateContent(prompt);
+
+                const endTime = new Date();
+                const timeTaken = (endTime - startTime) / 1000; 
+
+                console.log("Raw result:", result); 
+                let generatedLetter = "Sorry, I couldn't generate a response.";
+                if (result.response && result.response.candidates && result.response.candidates.length > 0) {
+                    generatedLetter = result.response.candidates[0].content.parts
+                        .map(part => part.text)
+                        .join('');
+                }
+
+                alert(`Leave letter generated in ${timeTaken} seconds:\n\n` + generatedLetter);
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const margin = 10;
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const maxWidth = pageWidth - 2 * margin;
+                const lineHeight = 10;
+                const splitText = doc.splitTextToSize(generatedLetter, maxWidth);
+                let yPosition = margin;
+
+                splitText.forEach(line => {
+                    if (yPosition + lineHeight > doc.internal.pageSize.getHeight() - margin) {
+                        doc.addPage();
+                        yPosition = margin;
+                    }
+                    doc.text(line, margin, yPosition);
+                    yPosition += lineHeight;
+                });
+
+                doc.save("Leave_Letter.pdf");
+            } catch (error) {
+                console.error("Error generating leave letter:", error);
+                alert("An error occurred while generating the leave letter. Please try again.");
+            } finally {
+                document.getElementById("loading-spinner").style.display = "none";
+                document.getElementById("loading-text").style.display = "none";
+            }
+        });
+    </script>
+</body>
+</html>
